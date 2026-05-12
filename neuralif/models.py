@@ -686,13 +686,9 @@ class ToLowerTriangular(torch_geometric.transforms.BaseTransform):
     def __init__(self, inplace=False):
         self.inplace = inplace
         
-    def __call__(self, data, order=None):
+    def forward(self, data):
         if not self.inplace:
             data = data.clone()
-        
-        # TODO: if order is given use that one instead
-        if order is not None:
-            raise NotImplementedError("Custom ordering not yet implemented...")
         
         # transform the data into lower triag graph
         # this should be a data transformation (maybe?)
