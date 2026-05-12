@@ -65,7 +65,7 @@ def validate(model, validation_loader, solve=False, solver="cg", **kwargs):
             # Here, we compute the loss using the full forbenius norm (no estimator)
             # l = frobenius_loss(output, A)
             
-            l = loss(data, output, config="frobenius")
+            l = loss(output, data, config="frobenius")
             
             acc_loss += l.item()
             num_loss += 1
