@@ -1,0 +1,23 @@
+[project]
+name = "neural-incomplete-factorization"
+version = "0.1.0"
+description = "Fork of NeuralIF testing cmod-graph message passing for learned IC preconditioners"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "torch>=2.2",
+    "torch-geometric>=2.5",
+    "scipy>=1.11",
+    "networkx>=3.0",
+    "numpy>=1.26",
+    "matplotlib>=3.7",
+    "psutil>=5.9",
+    "ilupp>=1.0.2",
+    "numml",
+]
+
+[tool.uv.sources]
+numml = { git = "https://github.com/nicknytko/numml" }
+
+[tool.uv]
+package = false
