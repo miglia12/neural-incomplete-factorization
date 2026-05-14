@@ -227,7 +227,7 @@ def load_checkpoint(model, args, device):
         model = model(**config)
         print(f"load checkpoint: {checkpoint}")
         model.load_state_dict(torch.load(checkpoint + f"/{args.weights}.pt",
-                                            map_location=torch.device(model.device)))
+                                            map_location=torch.device(device)))
     
     else:
         model = model(**{"global_features": 0, "latent_size": 8, "augment_nodes": False,

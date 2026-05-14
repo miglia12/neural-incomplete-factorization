@@ -166,7 +166,7 @@ def main(config):
             
             # track the gradient norm
             if "gradient_clipping" in config and config["gradient_clipping"]:
-                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config["gradient_clipping"])
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config["gradient_clipping"]).item()
             
             else:
                 total_norm = 0.0
