@@ -164,11 +164,11 @@ def rademacher(n, m=1, device=None):
 
 
 def torch_sparse_to_scipy(A):
-    A = A.coalesce()
+    A = A.coalesce().cpu()
     d = A.values().squeeze().numpy()
     i, j = A.indices().numpy()
     A_s = scipy.sparse.coo_matrix((d, (i, j)))
-    
+
     return A_s
 
 
