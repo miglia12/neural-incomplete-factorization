@@ -59,7 +59,7 @@ def gradient_clipping(model, clip=None):
 
 def save_dict_to_file(dictionary, filename):
     with open(filename, 'w') as file:
-        file.write(json.dumps(dictionary))
+        file.write(json.dumps(dictionary, default=str))
 
 
 def count_parameters(model):

@@ -1,7 +1,8 @@
-import os
 import datetime
 import argparse
 import pprint
+from pathlib import Path
+
 import torch
 import torch_geometric
 import time
@@ -82,8 +83,8 @@ def validate(model, validation_loader, solve=False, solver="cg", **kwargs):
 
 def main(config):
     if config["save"]:
-        os.makedirs(folder, exist_ok=True)
-        save_dict_to_file(config, os.path.join(folder, "config.json"))
+        folder.mkdir(parents=True, exist_ok=True)
+        save_dict_to_file(config, folder / "config.json")
     
     # global seed-ish
     torch_geometric.seed_everything(config["seed"])
@@ -125,9 +126,10 @@ def main(config):
     
     # Setup datasets
     train_loader = get_dataloader(config["dataset"], config["n"], config["batch_size"],
-                                  spd=not gmres, mode="train")
-    
-    validation_loader = get_dataloader(config["dataset"], config["n"], 1, spd=(not gmres), mode="val")
+                                  spd=not gmres, mode="train", root=config["data_root"])
+
+    validation_loader = get_dataloader(config["dataset"], config["n"], 1, spd=(not gmres),
+                                       mode="val", root=config["data_root"])
     
     best_val = float("inf")
     logger = TrainResults(folder)
@@ -203,21 +205,21 @@ def main(config):
                 
                 if val_perf < best_val:
                     if config["save"]:
-                        torch.save(model.state_dict(), f"{folder}/best_model.pt")
+                        torch.save(model.state_dict(), folder / "best_model.pt")
                     best_val = val_perf
         
         epoch_time = time.perf_counter() - start_epoch
         
         # save model every epoch for analysis...
         if config["save"]:
-            torch.save(model.state_dict(), f"{folder}/model_epoch{epoch+1}.pt")
+            torch.save(model.state_dict(), folder / f"model_epoch{epoch+1}.pt")
         
         print(f"Epoch {epoch+1} \t loss: {1/len(train_loader) * running_loss} \t time: {epoch_time}")
     
     # save fully trained model
     if config["save"]:
         logger.save_results()
-        torch.save(model.to(torch.float).state_dict(), f"{folder}/final_model.pt")
+        torch.save(model.to(torch.float).state_dict(), folder / "final_model.pt")
     
     # Test the model
     # wandb.run.summary["validation_chol"] = best_val
@@ -231,6 +233,10 @@ def argparser():
     parser.add_argument("--name", type=str, default=None)
     parser.add_argument("--device", type=int, required=False)
     parser.add_argument("--save", action='store_true')
+    parser.add_argument("--data-root", type=Path, default=Path("./data"),
+                        help="Root directory containing <dataset>/{train,val,test}")
+    parser.add_argument("--results-root", type=Path, default=Path("./results"),
+                        help="Where to write checkpoints, logs, and config.json")
     
     # Training parameters
     parser.add_argument("--seed", type=int, default=42)
@@ -277,10 +283,8 @@ if __name__ == "__main__":
     else:
         device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
     
-    if args.name is not None:
-        folder = "results/" + args.name
-    else:
-        folder = folder = "results/" + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    run_name = args.name if args.name is not None else datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    folder = args.results_root / run_name
     
     print(f"Using device: {device}")
     print("Using config: ")

@@ -1,6 +1,6 @@
 import argparse
-import os
 import datetime
+from pathlib import Path
 
 import numpy as np
 import scipy
@@ -23,7 +23,7 @@ from apps.data import matrix_to_graph_sparse, get_dataloader
 def test(model, test_loader, device, folder, save_results=False, dataset="random", solver="cg"):
     
     if save_results:
-        os.makedirs(folder, exist_ok=False)
+        Path(folder).mkdir(parents=True, exist_ok=False)
 
     print()
     print(f"Test:\t{len(test_loader.dataset)} samples")
@@ -175,67 +175,59 @@ def test(model, test_loader, device, folder, save_results=False, dataset="random
 def load_checkpoint(model, args, device):
     # load the saved weights of the model and the hyper-parameters
     checkpoint = args.checkpoint
-    
+
     if checkpoint == "latest":
-        # list all the directories in the results folder
-        d = os.listdir("./results/")
-        d.sort()
-        
+        # scan args.results_root for the most recent directory that has a usable checkpoint
+        candidates = sorted(
+            (p for p in args.results_root.iterdir() if p.is_dir()),
+            reverse=True,
+        )
+
         config = None
-        
-        # find the latest checkpoint
-        for i in range(len(d)):
-            if os.path.isdir("./results/" + d[-i-1]):
-                dir_contents = os.listdir("./results/" + d[-i-1])
-                
-                # looking for a directory with both config and model weights
-                if "config.json" in dir_contents and "final_model.pt" in dir_contents:
-                    # load the config.json file
-                    with open("./results/" + d[-i-1] + "/config.json") as f:
-                        config = json.load(f)
-                        
-                        if config["model"] != args.model:
-                            config = None
-                            continue
-                        
-                        if "best_model.pt" in dir_contents:
-                            checkpoint = "./results/" + d[-i-1] + "/best_model.pt"
-                            break
-                        else:
-                            checkpoint = "./results/" + d[-i-1] + "/final_model.pt"
-                            break
+        for cand in candidates:
+            if not ((cand / "config.json").exists() and (cand / "final_model.pt").exists()):
+                continue
+            with open(cand / "config.json") as f:
+                config = json.load(f)
+            if config["model"] != args.model:
+                config = None
+                continue
+            checkpoint = cand / ("best_model.pt" if (cand / "best_model.pt").exists() else "final_model.pt")
+            break
+
         if config is None:
             print("Checkpoint not found...")
-        
+
         # neuralif has optional drop tolerance...
         if args.model == "neuralif":
             config["drop_tol"] = args.drop_tol
-        
+
         # intialize model and hyper-parameters
         model = model(**config)
         print(f"load checkpoint: {checkpoint}")
-        
+
         model.load_state_dict(torch.load(checkpoint, weights_only=False, map_location=torch.device(device)))
-    
+
     elif checkpoint is not None:
-        with open(checkpoint + "/config.json") as f:
+        checkpoint = Path(checkpoint)
+        with open(checkpoint / "config.json") as f:
             config = json.load(f)
-        
+
         if args.model == "neuralif":
             config["drop_tol"] = args.drop_tol
-        
+
         model = model(**config)
         print(f"load checkpoint: {checkpoint}")
-        model.load_state_dict(torch.load(checkpoint + f"/{args.weights}.pt",
+        model.load_state_dict(torch.load(checkpoint / f"{args.weights}.pt",
                                             map_location=torch.device(device)))
-    
+
     else:
         model = model(**{"global_features": 0, "latent_size": 8, "augment_nodes": False,
                             "message_passing_steps": 3, "skip_connections": True, "activation": "relu",
                             "aggregate": None, "decode_nodes": False})
-        
+
         print("No checkpoint provided, using random weights")
-    
+
     return model
 
 
@@ -260,10 +252,15 @@ def argparser():
 
     parser.add_argument("--name", type=str, default=None)
     parser.add_argument("--device", type=int, required=False)
-    
+    parser.add_argument("--data-root", type=Path, default=Path("./data"),
+                        help="Root directory containing <dataset>/{train,val,test}")
+    parser.add_argument("--results-root", type=Path, default=Path("./results"),
+                        help="Where eval outputs are written; also scanned for --checkpoint=latest")
+
     # select data driven model to run
     parser.add_argument("--model", type=str, required=False, default="none")
-    parser.add_argument("--checkpoint", type=str, required=False)
+    parser.add_argument("--checkpoint", type=str, required=False,
+                        help='Path to a results dir containing config.json and <weights>.pt, or the literal "latest"')
     parser.add_argument("--weights", type=str, required=False, default="model")
     parser.add_argument("--drop_tol", type=float, default=0)
     
@@ -289,10 +286,8 @@ def main():
     else:
         test_device = "cpu"
         
-    if args.name is not None:
-        folder = "results/" + args.name
-    else:
-        folder = folder = "results/" + datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    run_name = args.name if args.name is not None else datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    folder = args.results_root / run_name
     
     print()
     print(f"Using device: {test_device}")
@@ -330,7 +325,8 @@ def main():
     
     spd = args.solver == "cg" or args.solver == "direct"
     testdata_loader = get_dataloader(args.dataset, n=args.n, batch_size=1, mode=args.subset,
-                                     size=args.samples, spd=spd, graph=True)
+                                     size=args.samples, spd=spd, graph=True,
+                                     root=args.data_root)
     
     # Evaluate the model
     test(model, testdata_loader, test_device, folder,
