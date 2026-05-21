@@ -14,9 +14,7 @@ Defaults not pinned down by the paper (Appendix A.2 is sparse on details):
     - Refinement: uniform (mesh.refined(k)), k chosen to hit the target size
 
 Output format matches apps/synthetic.py: one PyG Data per .pt file under
-./data/Poisson/{train,val,test}/, named "{n_actual}_{idx}.pt". The v1
-cmod sidecar (agent/v1_spec.md §3) is produced separately, off-line, by
-the user's PARDISO script; this module knows nothing about it.
+./data/Poisson/{train,val,test}/, named "{n_actual}_{idx}.pt".
 """
 import math
 import time
@@ -166,7 +164,7 @@ def verify(A, b, target_min, target_max):
 
 # ── Driver ─────────────────────────────────────────────────────────────────
 MESH_TYPES = ('convex', 'hole', 'polytope')
-MAX_RETRIES = 3
+MAX_RETRIES = 10
 
 
 def create_dataset(samples, target_n_min, target_n_max, mode, rs, out_dir):
@@ -177,7 +175,11 @@ def create_dataset(samples, target_n_min, target_n_max, mode, rs, out_dir):
 
     n_ok = 0
     n_skip = 0
+    n_exists = 0
     for sam in range(samples):
+        if any(out_dir.glob(f"*_{sam}.pt")):
+            n_exists += 1
+            continue
         t0 = time.time()
         ok = False
         for attempt in range(MAX_RETRIES):
@@ -207,7 +209,8 @@ def create_dataset(samples, target_n_min, target_n_max, mode, rs, out_dir):
         dt = time.time() - t0
         print(f"[{mode}/{sam:4d}] ok n={n_actual} mesh={mesh_type} ({dt:.2f}s)", flush=True)
 
-    print(f"[{mode}] done: {n_ok} saved, {n_skip} skipped", flush=True)
+    print(f"[{mode}] done: {n_ok} saved, {n_skip} skipped, {n_exists} preexisting",
+          flush=True)
 
 
 if __name__ == '__main__':
