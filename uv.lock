@@ -561,6 +561,7 @@ dependencies = [
     { name = "numml" },
     { name = "numpy" },
     { name = "psutil" },
+    { name = "scikit-fem" },
     { name = "scipy" },
     { name = "torch", version = "2.11.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
     { name = "torch", version = "2.11.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux'" },
@@ -575,6 +576,7 @@ requires-dist = [
     { name = "numml", git = "https://github.com/nicknytko/numml" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "psutil", specifier = ">=5.9" },
+    { name = "scikit-fem", specifier = ">=12.0.1" },
     { name = "scipy", specifier = ">=1.11" },
     { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.2" },
     { name = "torch", marker = "sys_platform == 'linux'", specifier = ">=2.2", index = "https://download.pytorch.org/whl/cu128" },
@@ -916,6 +918,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/43/b8/7a707d60fea4c49094e40262cc0e2ca6c768cca21587e34d3f705afec47e/requests-2.34.0.tar.gz", hash = "sha256:7d62fe92f50eb82c529b0916bb445afa1531a566fc8f35ffdc64446e771b856a", size = 142436, upload-time = "2026-05-11T19:29:51.717Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/e6/e300fce5fe83c30520607a015dabd985df3251e188d234bfe9492e17a389/requests-2.34.0-py3-none-any.whl", hash = "sha256:917520a21b767485ce7c588f4ebb917c436b24a31231b44228715eaeb5a52c60", size = 73021, upload-time = "2026-05-11T19:29:49.923Z" },
+]
+
+[[package]]
+name = "scikit-fem"
+version = "12.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/03/2776ee505116c00a98aa431465c9a424c09a62a3e01f2c0dbcbaecac7b64/scikit_fem-12.0.1.tar.gz", hash = "sha256:2e68398c4b37314626ea735a508fc47a718ee578e51126b99a264a7d8395ec81", size = 128848, upload-time = "2026-01-19T13:41:30.487Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/a6/be280db27b3434697323b92cf9268464b53e2dd5711a33c1c275be20302f/scikit_fem-12.0.1-py3-none-any.whl", hash = "sha256:b092ad231013550ff69de04e50bbcb58a423aaa241b418b16da67cc1c0fdef0a", size = 175337, upload-time = "2026-01-19T13:41:28.685Z" },
 ]
 
 [[package]]

@@ -45,8 +45,11 @@ def get_dataloader(dataset, n=0, batch_size=1, spd=True, mode="train", size=None
     if dataset == "random":
         data = FolderDataset(root / "Random" / mode, n, size=size, graph=graph)
 
+    elif dataset == "poisson":
+        data = FolderDataset(root / "Poisson" / mode, n, size=size, graph=graph)
+
     else:
-        raise NotImplementedError("Dataset not implemented, Available: random")
+        raise NotImplementedError("Dataset not implemented, Available: random, poisson")
 
     # Data Loaders
     if mode == "train":

@@ -71,6 +71,7 @@ numpy==2.4.4
     #   matplotlib
     #   neural-incomplete-factorization
     #   numml
+    #   scikit-fem
     #   scipy
     #   torch-geometric
 nvidia-cublas-cu12==12.8.4.1 ; sys_platform == 'linux'
@@ -132,10 +133,13 @@ python-dateutil==2.9.0.post0
     # via matplotlib
 requests==2.34.0
     # via torch-geometric
+scikit-fem==12.0.1
+    # via neural-incomplete-factorization
 scipy==1.17.1
     # via
     #   ilupp
     #   neural-incomplete-factorization
+    #   scikit-fem
 setuptools==81.0.0
     # via torch
 six==1.17.0
