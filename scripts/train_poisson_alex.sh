@@ -2,10 +2,11 @@
 #
 #SBATCH --job-name=nif-train-poisson
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=12:00:00
+#SBATCH --time=08:00:00
 #SBATCH --export=NONE
 
 unset SLURM_EXPORT_ENV
+export PYTHONUNBUFFERED=1
 
 module load cuda/12.9.0 gcc/11.2.0 python/3.12-conda
 

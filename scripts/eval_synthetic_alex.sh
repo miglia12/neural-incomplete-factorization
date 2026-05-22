@@ -1,32 +1,41 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=nif-eval-table1
+#SBATCH --job-name=nif-eval-synthetic
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=00:45:00
+#SBATCH --time=00:30:00
 #SBATCH --export=NONE
+#
+# Evaluate a NeuralIF model on the SYNTHETIC (Random) test set.
+#
+#   sbatch scripts/eval_synthetic_alex.sh
+#       No argument -> original behavior: baselines (None/Jacobi/IC(0)) + the
+#       in-distribution synthetic model (DEFAULT_CKPT below).
+#
+#   sbatch scripts/eval_synthetic_alex.sh <checkpoint_dir>
+#       Argument -> cross-eval: run ONLY that model on the Random test set,
+#       skip baselines (they are dataset-intrinsic and already produced by the
+#       no-argument run).
+#
+# Result dirs: results/eval_<trained_on>_on_random_<ts>/  (+ eval_baselines_on_random_<ts>/)
 
 unset SLURM_EXPORT_ENV
+export PYTHONUNBUFFERED=1
 
 module load cuda/12.9.0 gcc/11.2.0 python/3.12-conda
 
-test -d "$SLURM_SUBMIT_DIR/data/Random" || {
-  echo "ERROR: $SLURM_SUBMIT_DIR/data/Random missing — did you run gen_synthetic?"
-  exit 1
-}
-test -d "$SLURM_SUBMIT_DIR/results" || {
-  echo "ERROR: $SLURM_SUBMIT_DIR/results missing — set up the symlink to \$WORK/.../results"
-  exit 1
-}
+DEFAULT_CKPT="$SLURM_SUBMIT_DIR/results/random_20260513_171331"
+if [ -z "$1" ]; then
+  CHECKPOINT_DIR="$DEFAULT_CKPT"
+  RUN_BASELINES=1
+else
+  CHECKPOINT_DIR="$1"
+  RUN_BASELINES=0
+fi
 
-CHECKPOINT_DIR="$SLURM_SUBMIT_DIR/results/table1_synthetic_20260513_171331"
-test -f "$CHECKPOINT_DIR/best_model.pt" || {
-  echo "ERROR: best_model.pt missing at $CHECKPOINT_DIR"
-  exit 1
-}
-test -f "$CHECKPOINT_DIR/config.json" || {
-  echo "ERROR: config.json   missing at $CHECKPOINT_DIR"
-  exit 1
-}
+test -f "$CHECKPOINT_DIR/best_model.pt" || { echo "ERROR: best_model.pt missing at $CHECKPOINT_DIR"; exit 1; }
+test -f "$CHECKPOINT_DIR/config.json"   || { echo "ERROR: config.json missing at $CHECKPOINT_DIR"; exit 1; }
+test -d "$SLURM_SUBMIT_DIR/data/Random" || { echo "ERROR: data/Random missing — did you run gen_synthetic?"; exit 1; }
+test -d "$SLURM_SUBMIT_DIR/results"     || { echo "ERROR: results/ missing — set up the symlink to \$WORK/.../results"; exit 1; }
 
 TARBALL_PATH="$WORK/venvs/archive/nif-venv.tar.gz"
 if [ -f "$TARBALL_PATH" ]; then
@@ -39,30 +48,40 @@ else
   source $WORK/venvs/nif/bin/activate
 fi
 
-mkdir -p $TMPDIR/data
-cp -r "$SLURM_SUBMIT_DIR/data/Random" $TMPDIR/data/
-echo "Data staged: $(du -sh $TMPDIR/data | cut -f1)"
+mkdir -p $TMPDIR/data/Random
+cp -r "$SLURM_SUBMIT_DIR/data/Random/test" $TMPDIR/data/Random/
+echo "Data staged: $(du -sh $TMPDIR/data/Random | cut -f1)"
+
+# Derive the model's training dataset from its config (for unambiguous naming).
+TRAIN_DS=$(python -c "import json; print(json.load(open('$CHECKPOINT_DIR/config.json')).get('dataset','unknown'))")
+TS=$(date +%Y%m%d_%H%M%S)
+echo "Model trained on: '$TRAIN_DS'  |  Evaluating on: 'random'"
+[ "$TRAIN_DS" = "random" ] && echo "(in-distribution)" || echo "(CROSS-distribution)"
+
+if [ "$RUN_BASELINES" = "1" ]; then
+  echo
+  echo "Baselines (None, Jacobi, IC(0)) on random test set"
+  echo
+  python "$SLURM_SUBMIT_DIR/test.py" \
+    --data-root "$TMPDIR/data" \
+    --results-root "$SLURM_SUBMIT_DIR/results" \
+    --dataset random \
+    --model none \
+    --n 10000 \
+    --subset test \
+    --solver cg \
+    --device 0 \
+    --save \
+    --name "eval_baselines_on_random_${TS}"
+fi
 
 echo
-echo "Baselines (None, Jacobi, IC(0))"
+echo "NeuralIF ('${TRAIN_DS}'-trained) on random test set"
 echo
 python "$SLURM_SUBMIT_DIR/test.py" \
   --data-root "$TMPDIR/data" \
   --results-root "$SLURM_SUBMIT_DIR/results" \
-  --model none \
-  --n 10000 \
-  --subset test \
-  --solver cg \
-  --device 0 \
-  --save \
-  --name "eval_baselines_$(date +%Y%m%d_%H%M%S)"
-
-echo
-echo "NeuralIF"
-echo
-python "$SLURM_SUBMIT_DIR/test.py" \
-  --data-root "$TMPDIR/data" \
-  --results-root "$SLURM_SUBMIT_DIR/results" \
+  --dataset random \
   --model neuralif \
   --checkpoint "$CHECKPOINT_DIR" \
   --weights best_model \
@@ -71,4 +90,6 @@ python "$SLURM_SUBMIT_DIR/test.py" \
   --solver cg \
   --device 0 \
   --save \
-  --name "eval_neuralif_$(date +%Y%m%d_%H%M%S)"
+  --name "eval_${TRAIN_DS}_on_random_${TS}"
+
+echo "Done. Result: results/eval_${TRAIN_DS}_on_random_${TS}/"

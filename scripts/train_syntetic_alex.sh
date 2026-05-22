@@ -1,11 +1,12 @@
 #!/bin/bash -l
 #
-#SBATCH --job-name=nif-train-table1
+#SBATCH --job-name=nif-train-random
 #SBATCH --gres=gpu:a40:1
-#SBATCH --time=02:30:00
+#SBATCH --time=02:00:00
 #SBATCH --export=NONE
 
 unset SLURM_EXPORT_ENV
+export PYTHONUNBUFFERED=1
 
 module load cuda/12.9.0 gcc/11.2.0 python/3.12-conda
 
@@ -33,7 +34,7 @@ mkdir -p $TMPDIR/data
 cp -r "$SLURM_SUBMIT_DIR/data/Random" $TMPDIR/data/
 echo "Data staged: $(du -sh $TMPDIR/data | cut -f1)"
 
-RUN_NAME="table1_synthetic_$(date +%Y%m%d_%H%M%S)"
+RUN_NAME="random_$(date +%Y%m%d_%H%M%S)"
 echo "Run name: $RUN_NAME"
 python "$SLURM_SUBMIT_DIR/train.py" \
   --data-root "$TMPDIR/data" \
