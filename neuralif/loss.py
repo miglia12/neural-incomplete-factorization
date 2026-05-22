@@ -1,5 +1,6 @@
 import warnings
 import torch
+import numml.sparse as sp
 
 from apps.data import graph_to_matrix
 
@@ -39,22 +40,29 @@ def sketched_loss(L, A, c=None, normalized=False):
         L = L[0]
     else:
         U = L.T
-    
+
     eps = 1e-8
-    
-    z = torch.randn((A.shape[0], 1), device=L.device)
-    
+
+    # Compute the L Uᵀ z products with numml's sparse CSR matvec (spmv).
+    if not isinstance(L, sp.SparseCSRTensor):
+        L = sp.SparseCSRTensor(L)
+    if not isinstance(U, sp.SparseCSRTensor):
+        U = sp.SparseCSRTensor(U)
+
+    z = torch.randn(A.shape[0], device=A.device)
+
     # if normalized:
     # z = z / torch.linalg.norm(z) # z-vector also should have unit length
-    
-    est = L@(U@z) - A@z
+
+    Az = (A @ z.unsqueeze(1)).squeeze(1)
+    est = L.spmv(U.spmv(z)) - Az
     norm = torch.linalg.vector_norm(est, ord=2) # vector norm
-    
+
     if normalized and c is None:
-        norm = norm / torch.linalg.vector_norm(A@z, ord=2)
+        norm = norm / torch.linalg.vector_norm(Az, ord=2)
     elif normalized:
         norm = norm / (c + eps)
-    
+
     return norm
 
 
