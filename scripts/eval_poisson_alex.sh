@@ -19,6 +19,7 @@
 
 unset SLURM_EXPORT_ENV
 export PYTHONUNBUFFERED=1
+export OMP_NUM_THREADS=${SLURM_CPUS_ON_NODE:-$(nproc)}
 
 module load cuda/12.9.0 gcc/11.2.0 python/3.12-conda
 
@@ -59,12 +60,11 @@ else
   source $WORK/venvs/nif/bin/activate
 fi
 
-# Eval only reads the test split.
 mkdir -p $TMPDIR/data/Poisson
 cp -r "$SLURM_SUBMIT_DIR/data/Poisson/test" $TMPDIR/data/Poisson/
 echo "Data staged: $(du -sh $TMPDIR/data/Poisson | cut -f1)"
 
-# Derive the model's training dataset from its config (for unambiguous naming).
+# Derive the model's training dataset from its config.
 TRAIN_DS=$(python -c "import json; print(json.load(open('$CHECKPOINT_DIR/config.json')).get('dataset','unknown'))")
 TS=$(date +%Y%m%d_%H%M%S)
 echo "Model trained on: '$TRAIN_DS'  |  Evaluating on: 'poisson'"

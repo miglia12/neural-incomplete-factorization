@@ -20,6 +20,7 @@
 
 unset SLURM_EXPORT_ENV
 export PYTHONUNBUFFERED=1
+export OMP_NUM_THREADS=${SLURM_CPUS_ON_NODE:-$(nproc)}
 
 module load cuda/12.9.0 gcc/11.2.0 python/3.12-conda
 
@@ -32,10 +33,22 @@ else
   RUN_BASELINES=0
 fi
 
-test -f "$CHECKPOINT_DIR/best_model.pt" || { echo "ERROR: best_model.pt missing at $CHECKPOINT_DIR"; exit 1; }
-test -f "$CHECKPOINT_DIR/config.json"   || { echo "ERROR: config.json missing at $CHECKPOINT_DIR"; exit 1; }
-test -d "$SLURM_SUBMIT_DIR/data/Random" || { echo "ERROR: data/Random missing — did you run gen_synthetic?"; exit 1; }
-test -d "$SLURM_SUBMIT_DIR/results"     || { echo "ERROR: results/ missing — set up the symlink to \$WORK/.../results"; exit 1; }
+test -f "$CHECKPOINT_DIR/best_model.pt" || {
+  echo "ERROR: best_model.pt missing at $CHECKPOINT_DIR"
+  exit 1
+}
+test -f "$CHECKPOINT_DIR/config.json" || {
+  echo "ERROR: config.json missing at $CHECKPOINT_DIR"
+  exit 1
+}
+test -d "$SLURM_SUBMIT_DIR/data/Random" || {
+  echo "ERROR: data/Random missing — did you run gen_synthetic?"
+  exit 1
+}
+test -d "$SLURM_SUBMIT_DIR/results" || {
+  echo 'ERROR: results/ missing — set up the symlink to $WORK/.../results'
+  exit 1
+}
 
 TARBALL_PATH="$WORK/venvs/archive/nif-venv.tar.gz"
 if [ -f "$TARBALL_PATH" ]; then
