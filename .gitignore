@@ -4,3 +4,12 @@ __pycache__/
 data/
 results/
 .DS_Store
+
+# extract_symbolic — build artifacts and test fixtures (track only source)
+extract_symbolic/extract_symbolic
+extract_symbolic/extract_symbolic.dSYM/
+extract_symbolic/libpardiso.dylib
+extract_symbolic/libpardiso.so
+extract_symbolic/*.mtx
+extract_symbolic/*.psym
+extract_symbolic/*.symb.npz
